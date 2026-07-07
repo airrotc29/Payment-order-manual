@@ -1,15 +1,19 @@
 {%- comment -%}
-  assets/slides/ 폴더 안의 모든 이미지를 파일명 순으로 "전부" 캐러셀(페이지 넘기기)로 보여준다.
-  캡션이 필요하면 _data/slides.yml 에 { file, step, title, desc } 항목을 추가하면 매칭된다.
+  지정 폴더(기본 assets/slides) 안의 모든 이미지를 파일명 순으로 "전부" 캐러셀(페이지 넘기기)로 보여준다.
+  캡션이 필요하면 _data/<data>.yml (기본 slides.yml) 에 { file, step, title, desc } 항목을 추가하면 매칭된다.
+  사용: {% include slides-gallery.html folder="assets/garnishment" data="garnishment" %}
 {%- endcomment -%}
-{%- assign slide_files = site.static_files | where_exp: "f", "f.path contains '/assets/slides/'" -%}
+{%- assign gallery_folder = include.folder | default: "assets/slides" -%}
+{%- assign gallery_data_key = include.data | default: "slides" -%}
+{%- assign gallery_data = site.data[gallery_data_key] -%}
+{%- assign slide_files = site.static_files | where_exp: "f", "f.path contains gallery_folder" -%}
 {%- assign slide_files = slide_files | where_exp: "f", "f.extname != '.md'" | sort: "name" -%}
 {%- assign shown = slide_files.size -%}
 
 {%- if shown == 0 -%}
 <div class="slides-empty">
   <p><strong>슬라이드 이미지가 아직 없습니다.</strong></p>
-  <p><code>assets/slides/</code> 폴더에 슬라이드 이미지를 올리면
+  <p><code>{{ gallery_folder }}/</code> 폴더에 슬라이드 이미지를 올리면
      (예: <code>01.png</code>, <code>02.png</code> … <code>29.png</code>)
      여기에 <strong>전부 순서대로</strong> 표시됩니다.</p>
 </div>
@@ -40,7 +44,7 @@
 (function(){
   var slides = [
     {%- for f in slide_files -%}
-      {%- assign meta = site.data.slides | where: "file", f.name | first -%}
+      {%- assign meta = gallery_data | where: "file", f.name | first -%}
       {
         src: {{ f.path | relative_url | jsonify }},
         step: {{ meta.step | default: forloop.index | jsonify }},
