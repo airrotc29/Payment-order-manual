@@ -54,8 +54,10 @@
     margin-top:2.2rem;display:flex;flex-wrap:wrap;gap:.9rem;justify-content:center;
   }
   .cover-btn{
-    display:inline-block;padding:.85em 1.8em;border-radius:999px;
-    font-weight:700;font-size:.98rem;text-decoration:none;
+    display:inline-block;box-sizing:border-box;
+    width:clamp(9.5rem,24vw,12.4rem);padding:.85em 1em;border-radius:999px;
+    font-weight:700;font-size:.98rem;text-decoration:none;text-align:center;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     transition:transform .12s ease, box-shadow .12s ease;
   }
   .cover-btn:hover{transform:translateY(-1px);}
