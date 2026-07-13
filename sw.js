@@ -1,11 +1,14 @@
 /* 지급명령 매뉴얼 - 서비스워커 (오프라인 지원) */
-const CACHE = 'jimyeong-v1';
+const CACHE = 'jimyeong-v2';
 
 // 설치 시 핵심 자원을 미리 캐시 (경로는 SW 위치 기준 상대경로)
 const PRECACHE = [
   './',
   './index.html',
   './docs/지급명령-매뉴얼.html',
+  './docs/실무매뉴얼.html',
+  './docs/하자적출-시스템.html',
+  './assets/js/xlsx.core.min.js',
   './manifest.webmanifest',
   './assets/icons/icon-192.png',
   './assets/icons/icon-512.png',
