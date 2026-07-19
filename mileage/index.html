@@ -378,6 +378,27 @@ body {
 
 .empty-msg { text-align: center; padding: 40px 20px; color: var(--gray-400); font-size: 13px; }
 
+/* ── Car care checklist ── */
+.care-car-card:last-child { margin-bottom: 0; }
+.care-list { display: flex; flex-direction: column; }
+.care-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 4px; border-bottom: 1px solid var(--gray-100);
+  cursor: pointer; user-select: none;
+}
+.care-item:last-child { border-bottom: none; }
+.care-item:hover { background: var(--gray-50); }
+.care-check { font-size: 20px; width: 26px; text-align: center; flex-shrink: 0; }
+.care-item-body { flex: 1; min-width: 0; }
+.care-item-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+.care-item.done .care-item-name { color: var(--success); }
+.care-item-date { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+.care-item.done .care-item-date { color: var(--success); }
+.care-memo {
+  width: 100%; margin-top: 10px; resize: vertical;
+  font-family: inherit;
+}
+
 /* Toast */
 .toast {
   position: fixed; bottom: 24px; left: 50%;
@@ -465,6 +486,7 @@ body {
     </div>
     <div class="app-bar-title"></div>
     <div class="app-bar-btns">
+      <button class="bar-btn" onclick="showCare()">🔧 정비</button>
       <button class="bar-btn" onclick="showAdmin()">📊 관리</button>
       <button class="bar-btn" onclick="logout()">로그아웃</button>
     </div>
@@ -593,6 +615,17 @@ body {
       <div class="rec-list" id="recList"></div>
     </div>
   </div>
+</div>
+
+<!-- ══════════════════════════════
+     SCREEN 4: CAR CARE (정비/관리 체크리스트)
+══════════════════════════════ -->
+<div class="screen" id="careScreen">
+  <div class="admin-bar">
+    <div class="admin-bar-title">🔧 차량 정비/관리</div>
+    <button class="bar-btn" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);" onclick="showMain()">← 돌아가기</button>
+  </div>
+  <div class="admin-body" id="careBody"></div>
 </div>
 
 <!-- Admin PIN modal -->
@@ -1003,6 +1036,68 @@ function deleteRecord(id) {
 }
 
 // ═══════════════════════════════════════════════
+// CAR CARE (정비/관리 체크리스트)
+// ═══════════════════════════════════════════════
+const CARE_ITEMS = [
+  { key: 'engineOil', icon: '🛢️', label: '엔진오일 교체' },
+  { key: 'tire',      icon: '🛞', label: '타이어 마모/공기압 점검' },
+  { key: 'battery',   icon: '🔋', label: '배터리 점검' },
+  { key: 'brake',     icon: '🛑', label: '브레이크 패드/오일 점검' },
+  { key: 'coolant',   icon: '💧', label: '냉각수 점검' },
+  { key: 'inspection',icon: '📋', label: '자동차 정기검사' },
+];
+let careData = {}; // { [car]: { items: { [key]: {done, date} }, memo } }
+
+function showCare() {
+  document.getElementById('careBody').innerHTML = '<div class="empty-msg">☁️ 정비 기록 불러오는 중...</div>';
+  show('careScreen');
+  loadCareFromCloud().then(renderCare);
+}
+
+function renderCare() {
+  document.getElementById('careBody').innerHTML = Object.keys(CAR_NUMS).map(car => {
+    const cd = careData[car] || { items: {}, memo: '' };
+    const itemsHtml = CARE_ITEMS.map(it => {
+      const st = cd.items[it.key] || {};
+      const done = !!st.done;
+      return `<div class="care-item${done ? ' done' : ''}" onclick="toggleCareItem('${car}','${it.key}')">
+        <div class="care-check">${done ? '✅' : '⬜'}</div>
+        <div class="care-item-body">
+          <div class="care-item-name">${it.icon} ${it.label}</div>
+          <div class="care-item-date">${done && st.date ? '완료: ' + st.date : '미실시'}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="card care-car-card">
+      <div class="card-title"><span class="ct-dot"></span>${car} <span style="font-weight:400;color:var(--gray-400);">(${CAR_NUMS[car] || ''})</span></div>
+      <div class="care-list">${itemsHtml}</div>
+      <textarea class="memo-input care-memo" rows="2" placeholder="정비 관련 비고" onblur="updateCareMemo('${car}', this.value)">${cd.memo || ''}</textarea>
+    </div>`;
+  }).join('');
+}
+
+function toggleCareItem(car, key) {
+  if (!careData[car]) careData[car] = { items: {}, memo: '' };
+  const cur = careData[car].items[key] || {};
+  careData[car].items[key] = cur.done
+    ? { done: false, date: cur.date || '' }
+    : { done: true, date: todayStr() };
+  renderCare();
+  saveCareToCloud(car);
+}
+
+function updateCareMemo(car, value) {
+  if (!careData[car]) careData[car] = { items: {}, memo: '' };
+  careData[car].memo = value;
+  saveCareToCloud(car);
+}
+
+function todayStr() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════
 // EXCEL EXPORT
 // ═══════════════════════════════════════════════
 function exportExcel() {
@@ -1151,6 +1246,26 @@ async function deleteRecordFromCloud(id) {
     await db.collection('mileage').doc(String(id)).delete();
   } catch(e) {
     console.error('Cloud delete error:', e);
+  }
+}
+
+async function loadCareFromCloud() {
+  try {
+    const snap = await db.collection('carcare').get();
+    careData = {};
+    snap.docs.forEach(d => { careData[d.id] = d.data(); });
+  } catch(e) {
+    console.error('Care load error:', e);
+    toast('⚠️ 정비 기록을 불러오지 못했습니다.', 'err');
+  }
+}
+
+async function saveCareToCloud(car) {
+  try {
+    await db.collection('carcare').doc(car).set(careData[car]);
+  } catch(e) {
+    console.error('Care save error:', e);
+    toast('⚠️ 정비 기록 저장 실패', 'err');
   }
 }
 
